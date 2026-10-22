@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blade Rift</title>
+<meta name="description" content="Blade Rift - a pixel-art horde survival game for Android. Pick a hero, step through the Rift, survive the swarm and evolve your weapons.">
+<meta property="og:title" content="Blade Rift">
+<meta property="og:description" content="Pick a hero, step through the Rift, survive the swarm.">
+<meta property="og:image" content="img/shot_dunes.jpg">
+<link rel="icon" href="img/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0d0819; --void: #150d29; --stone: #241b3f; --stone-hi: #34285a; --stone-lo: #18112c;
+  --line: #43356f; --text: #ece8f8; --dim: #a99fc6;
+  --gold: #ffcf4a; --gold-hi: #fff0a8; --gold-lo: #c27a1e; --bronze: #7a3f12;
+  --violet: #b77cff; --magenta: #ff5ce8; --ice: #7fd8ff;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--void); color: var(--text); font: 16px/1.6 Inter, system-ui, sans-serif; overflow-x: hidden; }
+img { max-width: 100%; display: block; }
+a { color: var(--gold); }
+.px { image-rendering: pixelated; image-rendering: crisp-edges; }
+h2, h3, .label { font-family: "Pixelify Sans", Inter, sans-serif; letter-spacing: .5px; }
+.wrap { width: min(1120px, 100% - 32px); margin: 0 auto; }
+
+/* ------------------------------------------------ top bar */
+.bar { position: fixed; inset: 0 0 auto 0; z-index: 20; display: flex; align-items: center; gap: 20px; padding: 10px 24px;
+  background: linear-gradient(#0d0819ee, #0d081900); transition: background .3s; }
+.bar.solid { background: #0d0819f2; box-shadow: 0 1px 0 var(--line); }
+.bar .mini { height: 30px; width: auto; }
+.bar nav { margin-left: auto; display: flex; gap: 22px; }
+.bar nav a { color: var(--text); text-decoration: none; font: 600 14px Inter, sans-serif; opacity: .85; }
+.bar nav a:hover { opacity: 1; color: var(--gold); }
+@media (max-width: 640px) { .bar nav { display: none; } }
+
+/* ------------------------------------------------ game-style buttons (gold paint, trim, a lip underneath) */
+.btn { display: inline-flex; align-items: center; gap: 10px; padding: 12px 22px 13px; border-radius: 6px; text-decoration: none;
+  font: 700 18px "Pixelify Sans", sans-serif; color: #3a1c06; letter-spacing: .5px;
+  background: linear-gradient(var(--gold-hi) 0 10%, #ffdf6a 10% 45%, var(--gold) 45% 80%, #f0a92e 80%);
+  border: 2px solid var(--ink); box-shadow: inset 0 0 0 2px #fff3c0aa, 0 5px 0 var(--bronze), 0 5px 0 2px var(--ink), 0 12px 24px #0008;
+  transition: transform .08s; }
+.btn:hover { transform: translateY(-2px); }
+.btn:active { transform: translateY(3px); box-shadow: inset 0 0 0 2px #fff3c0aa, 0 2px 0 var(--bronze), 0 2px 0 2px var(--ink); }
+.btn.stone { color: var(--text); background: linear-gradient(#8c80b8 0 10%, #6a5e98 10% 45%, #5b4f88 45% 80%, #4a3f74 80%);
+  box-shadow: inset 0 0 0 2px #ffd25a88, 0 5px 0 #2a2048, 0 5px 0 2px var(--ink), 0 12px 24px #0008; }
+.btn small { display: block; font: 500 11px Inter, sans-serif; opacity: .75; letter-spacing: 0; }
+.btn svg { width: 22px; height: 22px; }
+
+/* ------------------------------------------------ hero: the painted rift, the logo cutting itself together */
+.hero { position: relative; min-height: min(100vh, 920px); min-height: min(100svh, 920px); display: grid; place-items: center; overflow: hidden; isolation: isolate; }
+.hero .bg { position: absolute; inset: -6% -3% -6% -3%; background: url(img/bg.jpg) 62% 50%/cover; z-index: -2; will-change: transform; }
+.hero::after { content: ""; position: absolute; inset: 0; z-index: -1;
+  background: radial-gradient(ellipse at 50% 40%, #0000 0 35%, #0d0819aa 80%), linear-gradient(#0d081900 55%, var(--void) 98%); }
+.hero .inner { text-align: center; padding: 110px 16px 80px; }
+.logo { position: relative; width: min(470px, 78vw); margin: 0 auto; aspect-ratio: 772 / 643; filter: drop-shadow(0 18px 30px #0009); }
+.logo img { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* the logo arrives whole, a slash runs through it from the bottom left, and on the hit the halves come apart across
+   the cut, the way the game's title does it (Tools/Logo/logo_v3.py: the cut normal is (-0.89, -0.45)) */
+.logo { animation: appear .5s ease-out both, hit .4s ease-out 1.05s; }
+.logo .whole { animation: gone 0s linear 1.05s both; }
+.logo .a, .logo .b { opacity: 0; animation: shown 0s linear 1.05s both; }
+.logo .a { animation: shown 0s linear 1.05s both, splitA .6s cubic-bezier(.12,.9,.3,1.2) 1.05s both; }
+.logo .b { animation: shown 0s linear 1.05s both, splitB .6s cubic-bezier(.12,.9,.3,1.2) 1.05s both; }
+.logo .cut { mix-blend-mode: screen; animation: slash .26s cubic-bezier(.55,0,.9,.4) .8s both, glow 2.6s ease-in-out 1.7s infinite; }
+@keyframes appear { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: none; } }
+@keyframes gone { to { opacity: 0; } }
+@keyframes shown { to { opacity: 1; } }
+@keyframes slash { from { clip-path: inset(100% 100% 0 0); filter: brightness(2.4); } to { clip-path: inset(0 0 0 0); filter: brightness(1.5); } }
+@keyframes glow { 50% { filter: brightness(1.4); } }
+@keyframes hit { 0% { filter: drop-shadow(0 18px 30px #0009) brightness(1.8); transform: scale(1.03); }
+  100% { filter: drop-shadow(0 18px 30px #0009); transform: none; } }
+@keyframes splitA { from { transform: none; } to { transform: translate(-2.6%, -1.3%); } }
+@keyframes splitB { from { transform: none; } to { transform: translate(2.6%, 1.3%); } }
+.tagline { font: 600 clamp(17px, 2.3vw, 22px)/1.45 Inter, sans-serif; color: #f4efff; max-width: 620px; margin: 18px auto 30px;
+  text-shadow: 0 2px 12px #000c; }
+.ctas { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; }
+.scroll { position: absolute; bottom: 22px; left: 50%; translate: -50% 0; color: var(--dim); font: 600 12px Inter; letter-spacing: 2px;
+  animation: bob 2s ease-in-out infinite; text-decoration: none; }
+@keyframes bob { 50% { transform: translateY(6px); } }
+.sparks { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+
+/* ------------------------------------------------ stone panels like the game's interface (studs in the corners) */
+.panel { position: relative; background: linear-gradient(var(--stone-hi), var(--stone) 18%, var(--stone-lo)); border: 2px solid var(--ink);
+  box-shadow: inset 0 0 0 2px #5b4b8f, inset 0 3px 0 2px #6d5ca6, 0 10px 30px #0007; border-radius: 6px; }
+.panel::before, .panel::after { content: ""; position: absolute; width: 6px; height: 6px; background: var(--gold); top: 6px; left: 6px;
+  box-shadow: 0 0 0 1px var(--ink); }
+.panel::after { left: auto; right: 6px; }
+
+section { padding: 90px 0; position: relative; }
+.head { text-align: center; margin-bottom: 44px; }
+.head .label { color: var(--violet); font-size: 15px; text-transform: uppercase; letter-spacing: 3px; }
+.head h2 { font-size: clamp(30px, 4.6vw, 48px); margin: 6px 0 10px; color: var(--gold); line-height: 1.1;
+  text-shadow: 0 3px 0 var(--bronze), 0 6px 18px #000a; }
+.head p { color: var(--dim); max-width: 640px; margin: 0 auto; }
+
+/* ------------------------------------------------ feature rows with a phone */
+.row { display: grid; grid-template-columns: 1.25fr 1fr; gap: 48px; align-items: center; margin-bottom: 80px; }
+.row:nth-child(even) { grid-template-columns: 1fr 1.25fr; }
+.row:nth-child(even) .phone { order: 2; }
+.phone { padding: 12px; border-radius: 26px; background: linear-gradient(145deg, #3d3360, #17112a); border: 2px solid var(--ink);
+  box-shadow: inset 0 0 0 2px #574a85, 0 24px 50px #000a, 0 0 80px -10px var(--glow, #b77cff55); }
+.phone img { border-radius: 16px; width: 100%; aspect-ratio: 16/9; object-fit: cover; }
+.row h3 { font-size: 30px; margin: 0 0 12px; color: var(--text); }
+.row h3 span { color: var(--gold); }
+.row p { color: var(--dim); margin: 0 0 14px; font-size: 17px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.chip { font: 600 13px Inter; padding: 5px 11px; border-radius: 999px; background: #2b2150; border: 1px solid var(--line); color: var(--text); }
+@media (max-width: 820px) { .row, .row:nth-child(even) { grid-template-columns: 1fr; gap: 22px; } .row:nth-child(even) .phone { order: 0; } }
+
+/* ------------------------------------------------ heroes */
+.heroes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+@media (max-width: 900px) { .heroes { grid-template-columns: repeat(2, 1fr); } }
+.card { padding: 18px 16px 18px; text-align: center; transition: transform .15s; }
+.card:hover { transform: translateY(-6px); }
+.card .stage { height: 150px; display: grid; place-items: end center; margin-bottom: 12px;
+  background: radial-gradient(ellipse at 50% 100%, #b77cff40, #0000 65%); }
+.card .stage img { height: 132px; width: auto; filter: drop-shadow(0 6px 0 #0006); }
+.card:hover .stage img { animation: hop .45s ease; }
+@keyframes hop { 40% { transform: translateY(-10px); } }
+.card h3 { margin: 0; font-size: 22px; color: var(--gold); }
+.card .role { color: var(--violet); font: 600 12px Inter; letter-spacing: 1.5px; text-transform: uppercase; margin: 2px 0 10px; }
+.card .kit { font-size: 14px; color: var(--dim); line-height: 1.5; }
+.card .kit b { color: var(--text); font-weight: 600; }
+
+/* ------------------------------------------------ rifts and their bosses */
+.rifts { display: grid; gap: 22px; }
+.rift { display: grid; grid-template-columns: 1.1fr 1.4fr; overflow: hidden; }
+.rift .pic { position: relative; min-height: 260px; background: center/cover; }
+.rift .pic::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, #0000 60%, var(--stone)); }
+.rift .info { padding: 24px 26px; }
+.rift h3 { margin: 0; font-size: 30px; color: var(--c); text-shadow: 0 3px 0 #0008; }
+.rift .diff { display: inline-block; font: 700 12px Inter; letter-spacing: 1.5px; text-transform: uppercase; padding: 3px 10px; border-radius: 4px;
+  background: var(--c); color: var(--ink); margin: 6px 0 10px; }
+.rift p { color: var(--dim); margin: 0 0 16px; }
+.bosses { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.boss { aspect-ratio: 1; display: grid; place-items: center; border-radius: 6px; background: #120c22; border: 1px solid var(--line);
+  position: relative; transition: transform .15s, border-color .15s; }
+.boss img { width: 86%; height: 86%; object-fit: contain; }
+.boss:hover { transform: scale(1.12); border-color: var(--c); z-index: 2; }
+.boss span { position: absolute; bottom: calc(100% + 6px); left: 50%; translate: -50% 0; white-space: nowrap; font: 600 12px Inter;
+  background: var(--ink); border: 1px solid var(--c); padding: 3px 8px; border-radius: 4px; opacity: 0; pointer-events: none; transition: opacity .15s; }
+.boss:hover span { opacity: 1; }
+@media (max-width: 820px) { .rift { grid-template-columns: 1fr; } .rift .pic { min-height: 200px; } .rift .pic::after { background: linear-gradient(#0000 55%, var(--stone)); } .bosses { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* ------------------------------------------------ more */
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+@media (max-width: 820px) { .grid3 { grid-template-columns: 1fr; } }
+.tile { padding: 24px 22px 22px; }
+.tile .ico { width: 60px; height: 60px; border-radius: 10px; display: grid; place-items: center; margin-bottom: 12px;
+  background: radial-gradient(#3a2b66, #120c22); border: 1px solid var(--line); }
+.tile .ico img { max-width: 44px; max-height: 40px; }
+.tile h3 { margin: 0 0 6px; font-size: 22px; color: var(--gold); }
+.tile p { margin: 0; color: var(--dim); font-size: 15px; }
+
+/* ------------------------------------------------ call to action and footer */
+.cta { text-align: center; padding: 70px 24px; overflow: hidden; background:
+  radial-gradient(ellipse at 50% 0%, #b77cff33, #0000 60%), linear-gradient(var(--stone-hi), var(--stone-lo)); }
+.cta .icon { width: 116px; height: 116px; border-radius: 26px; margin: 0 auto 18px; box-shadow: 0 10px 30px #000a, 0 0 0 2px var(--ink); }
+.cta h2 { font-family: "Pixelify Sans"; font-size: clamp(28px, 4vw, 40px); margin: 0 0 8px; color: var(--gold); text-shadow: 0 3px 0 var(--bronze); }
+.cta p { color: var(--dim); margin: 0 auto 26px; max-width: 520px; }
+footer { padding: 34px 0 44px; color: var(--dim); font-size: 14px; border-top: 1px solid var(--line); }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 18px 28px; align-items: center; }
+footer img { height: 34px; width: auto; }
+footer nav { display: flex; gap: 20px; flex-wrap: wrap; }
+footer .copy { margin-left: auto; }
+
+.reveal { opacity: 0; transform: translateY(26px); transition: opacity .7s, transform .7s; }
+.reveal.on { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } .reveal { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+
+<div class="bar" id="bar">
+  <img class="mini" src="img/logo.png" alt="Blade Rift">
+  <nav><a href="#play">Gameplay</a><a href="#heroes">Heroes</a><a href="#rifts">Rifts</a><a href="#contact">Contact</a></nav>
+</div>
+
+<header class="hero">
+  <div class="bg" id="bg"></div>
+  <canvas class="sparks" id="sparks"></canvas>
+  <div class="inner">
+    <div class="logo" role="img" aria-label="Blade Rift">
+      <img class="whole" src="img/logo_whole.png" alt="">
+      <img class="a" src="img/logo_a.png" alt="">
+      <img class="b" src="img/logo_b.png" alt="">
+      <img class="cut" src="img/logo_cut.png" alt="">
+    </div>
+    <p class="tagline">Step through the Rift. Survive the swarm. Evolve your weapons and bring down the bosses on the other side.</p>
+    <div class="ctas">
+      <a class="btn" href="#cta"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 2.6v18.8c0 .5.5.8 1 .6l10.6-9.6-10.6-10.4c-.5-.2-1 .1-1 .6Zm12.7 7.5 2.8 1.6c.7.4.7 1.4 0 1.8l-2.8 1.6-2.9-2.5 2.9-2.5ZM6.9 21.6l8-7.3 1.9 1.7-9.9 5.6Zm0-19.2 9.9 5.6-1.9 1.7-8-7.3Z"/></svg><span>Google Play<small>coming soon</small></span></a>
+      <a class="btn stone" href="#play">See the game</a>
+    </div>
+  </div>
+  <a class="scroll" href="#play">SCROLL</a>
+</header>
+
+<main>
+<section id="play">
+  <div class="wrap">
+    <div class="head reveal"><div class="label">Horde survival</div><h2>One hero against the Rift</h2>
+      <p>Move with one thumb, your weapons fire on their own. Every level up is a choice, every run is a new build.</p></div>
+
+    <div class="row reveal" style="--glow:#ffb35a55">
+      <div class="phone"><img src="img/shot_dunes.jpg" alt="Hundreds of enemies in the Scorched Dunes" loading="lazy"></div>
+      <div><h3>Survive <span>the swarm</span></h3>
+        <p>Hundreds of enemies pour out of the Rift. Dodge, kite them into a crowd and watch your build tear through it.</p>
+        <p>Chests, shrines, a travelling merchant and prisoners in crystals turn every run into a different story.</p>
+        <div class="chips"><span class="chip">30-minute runs</span><span class="chip">Endless mode</span><span class="chip">Rift tiers I-V</span></div></div>
+    </div>
+
+    <div class="row reveal" style="--glow:#7fd8ff55">
+      <div class="phone"><img src="img/shot_boss.jpg" alt="Fighting Stormwing on the Frostfall Peaks" loading="lazy"></div>
+      <div><h3>Bring down <span>the bosses</span></h3>
+        <p>Every rift has six bosses with their own attacks: shockwaves, ice cages, sandstorms, falling meteors.</p>
+        <p>A defeated boss drops a chest. Max a weapon, take its partner card, and the chest evolves it into something much bigger.</p>
+        <div class="chips"><span class="chip">24 bosses</span><span class="chip">Weapon evolutions</span><span class="chip">Rift runes</span></div></div>
+    </div>
+
+    <div class="row reveal" style="--glow:#8cff8a44">
+      <div class="phone"><img src="img/shot_camp.jpg" alt="The camp on a floating island" loading="lazy"></div>
+      <div><h3>A camp <span>that grows</span></h3>
+        <p>Between runs you come home to a floating island: a tavern, a workshop, pets by the well, townsfolk you rescued from the Rift.</p>
+        <p>Every boss you beat gets a stone statue in the garden.</p>
+        <div class="chips"><span class="chip">Upgrades</span><span class="chip">Pets</span><span class="chip">Daily quests</span><span class="chip">Statue garden</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="heroes" style="background: linear-gradient(#0000, #1b1233 20%, #1b1233 80%, #0000)">
+  <div class="wrap">
+    <div class="head reveal"><div class="label">Eight heroes</div><h2>Pick who goes in</h2>
+      <p>Each hero has a weapon of their own and a skill on the second button.</p></div>
+    <div class="heroes">
+      <div class="panel card reveal"><div class="stage"><img class="px" src="img/hero_hero.png" alt=""></div><h3>Kestrel</h3><div class="role">The Rift Warden</div><div class="kit"><b>Arc Caster</b> fires at the nearest enemy<br><b>Rift Dash</b> can't be hit</div></div>
+      <div class="panel card reveal"><div class="stage"><img class="px" src="img/hero_bram.png" alt=""></div><h3>Bram</h3><div class="role">The Ashblade</div><div class="kit"><b>Ashbrand</b> cuts bullets in the air<br><b>Ember Slam</b> sets all around on fire</div></div>
+      <div class="panel card reveal"><div class="stage"><img class="px" src="img/hero_jun.png" alt=""></div><h3>Jun</h3><div class="role">The Glaive Dancer</div><div class="kit"><b>Moonglaive</b> hits on the way out and back<br><b>Blade Waltz</b> pulls enemies in</div></div>
+      <div class="panel card reveal"><div class="stage"><img class="px" src="img/hero_rivet.png" alt=""></div><h3>Rivet</h3><div class="role">The Gravity Engineer</div><div class="kit"><b>Grav Launcher</b> pulls the crowd together<br><b>Singularity</b> swallows it whole</div></div>
+      <div class="panel card reveal"><div class="stage"><img class="px" src="img/hero_fenna.png" alt=""></div><h3>Fenna</h3><div class="role">The Rift Ranger</div><div class="kit"><b>Longbow</b> pierces from far away<br><b>Arrow Rain</b> covers a wide area</div></div>
+      <div class="panel card reveal"><div class="stage"><img class="px" src="img/hero_oda.png" alt=""></div><h3>Oda</h3><div class="role">The Ember Witch</div><div class="kit"><b>Ember Staff</b> homing fireballs<br><b>Meteor</b> falls on the crowd</div></div>
+      <div class="panel card reveal"><div class="stage"><img class="px" src="img/hero_haldor.png" alt=""></div><h3>Haldor</h3><div class="role">The Forge Warden</div><div class="kit"><b>Quakehammer</b> hits everything around<br><b>Anvil Drop</b> stuns the enemies</div></div>
+      <div class="panel card reveal"><div class="stage"><img class="px" src="img/hero_luma.png" alt=""></div><h3>Luma</h3><div class="role">The Songweaver</div><div class="kit"><b>Lute</b> homing notes that bounce<br><b>Crescendo</b> throws enemies back</div></div>
+    </div>
+  </div>
+</section>
+
+<section id="rifts">
+  <div class="wrap">
+    <div class="head reveal"><div class="label">Four rifts</div><h2>Every rift, its own world</h2>
+      <p>Own enemies, own events, own music and six bosses each. Win a rift to open the next one.</p></div>
+    <div class="rifts">
+      <div class="panel rift reveal" style="--c:#8fe07a"><div class="pic" style="background-image:url(img/map_grove.jpg)"></div><div class="info">
+        <h3>Shattered Grove</h3><div class="diff">Easy</div><p>A forest island where it all begins. Roots strike from below and spores burst in clouds.</p>
+        <div class="bosses"><div class="boss"><img class="px" src="img/boss_warden.png" alt=""><span>Stone Warden</span></div><div class="boss"><img class="px" src="img/boss_rotwood.png" alt=""><span>Rotwood</span></div><div class="boss"><img class="px" src="img/boss_hive.png" alt=""><span>Hive Mother</span></div><div class="boss"><img class="px" src="img/boss_jelly.png" alt=""><span>Storm Jelly</span></div><div class="boss"><img class="px" src="img/boss_phoenix.png" alt=""><span>Ash Phoenix</span></div><div class="boss"><img class="px" src="img/boss_vorthax.png" alt=""><span>Vorthax, final boss</span></div></div></div></div>
+      <div class="panel rift reveal" style="--c:#7fd8ff"><div class="pic" style="background-image:url(img/map_peaks.jpg)"></div><div class="info">
+        <h3>Frostfall Peaks</h3><div class="diff">Hard</div><p>Snow, ice and the northern lights. Icicles fall from above and blizzards hide the swarm.</p>
+        <div class="bosses"><div class="boss"><img class="px" src="img/boss_glacius.png" alt=""><span>Glacius</span></div><div class="boss"><img class="px" src="img/boss_owl.png" alt=""><span>Stormwing</span></div><div class="boss"><img class="px" src="img/boss_prisma.png" alt=""><span>Prisma</span></div><div class="boss"><img class="px" src="img/boss_mammoth.png" alt=""><span>Mammoth Warlord</span></div><div class="boss"><img class="px" src="img/boss_wyrm.png" alt=""><span>Aurora Wyrm</span></div><div class="boss"><img class="px" src="img/boss_heart.png" alt=""><span>Hoarfrost Heart</span></div></div></div></div>
+      <div class="panel rift reveal" style="--c:#ffc35a"><div class="pic" style="background-image:url(img/map_dunes.jpg)"></div><div class="info">
+        <h3>Scorched Dunes</h3><div class="diff">Very hard</div><p>Sand, tombs and sandstorms. The dead walk, and something hunts you under the sand.</p>
+        <div class="bosses"><div class="boss"><img class="px" src="img/boss_stalker.png" alt=""><span>Dune Stalker</span></div><div class="boss"><img class="px" src="img/boss_entombed.png" alt=""><span>The Entombed</span></div><div class="boss"><img class="px" src="img/boss_sandmaw.png" alt=""><span>Sandmaw</span></div><div class="boss"><img class="px" src="img/boss_mirage.png" alt=""><span>Mirage</span></div><div class="boss"><img class="px" src="img/boss_vulture.png" alt=""><span>Sun Vulture</span></div><div class="boss"><img class="px" src="img/boss_eclipse.png" alt=""><span>The Eclipse</span></div></div></div></div>
+      <div class="panel rift reveal" style="--c:#ff7a45"><div class="pic" style="background-image:url(img/map_caldera.jpg)"></div><div class="info">
+        <h3>Ember Caldera</h3><div class="diff">Infernal</div><p>Ash, lava and eruptions on the rim of a living volcano. The sky itself rains fire.</p>
+        <div class="bosses"><div class="boss"><img class="px" src="img/boss_slagjaw.png" alt=""><span>Slagjaw</span></div><div class="boss"><img class="px" src="img/boss_matriarch.png" alt=""><span>Ember Matriarch</span></div><div class="boss"><img class="px" src="img/boss_magmashell.png" alt=""><span>Magmashell</span></div><div class="boss"><img class="px" src="img/boss_ashknight.png" alt=""><span>The Ashen Knight</span></div><div class="boss"><img class="px" src="img/boss_wyvern.png" alt=""><span>Cinder Wyvern</span></div><div class="boss"><img class="px" src="img/boss_pyrrhos.png" alt=""><span>Pyrrhos</span></div></div></div></div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top: 20px">
+  <div class="wrap">
+    <div class="grid3">
+      <div class="panel tile reveal"><div class="ico"><img class="px" src="img/ico_chest_gold.png" alt=""></div><h3>Built your way</h3><p>Weapons, items, rerolls and banishes. Max a weapon, find its partner and evolve it at a boss chest.</p></div>
+      <div class="panel tile reveal"><div class="ico"><img class="px" src="img/ico_i_codex.png" alt=""></div><h3>Seven languages</h3><p>English, Russian, Spanish, Portuguese, German, French and Turkish.</p></div>
+      <div class="panel tile reveal"><div class="ico"><img class="px" src="img/ico_heart.png" alt=""></div><h3>Fair to play</h3><p>Plays offline. No forced ads: an ad plays only when you tap for a second chance or double gold.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="cta" id="cta">
+  <img class="icon" src="img/icon.png" alt="Blade Rift icon">
+  <h2>Coming to Google Play</h2>
+  <p>Blade Rift is getting ready for Android. The store page opens soon.</p>
+  <a class="btn" href="#contact">Get in touch</a>
+</section>
+</main>
+
+<footer id="contact">
+  <div class="wrap">
+    <img src="img/logo.png" alt="Blade Rift">
+    <nav><a href="privacy.html">Privacy policy</a><a href="privacy.html#ru">Конфиденциальность</a><span class="mail">Support address coming before the release</span></nav>
+    <span class="copy">&copy; 2026 Blade Rift Studio</span>
+  </div>
+</footer>
+
+<script>
+// the top bar turns solid once the hero is scrolled past; the background drifts slower than the page
+const bar = document.getElementById('bar'), bg = document.getElementById('bg');
+addEventListener('scroll', () => {
+  const y = scrollY;
+  bar.classList.toggle('solid', y > 60);
+  if (y < innerHeight * 1.2) bg.style.transform = `translateY(${y * 0.3}px) scale(1.04)`;
+}, { passive: true });
+
+// sections slide in as they come into view
+const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('on'); io.unobserve(e.target); } }), { threshold: .12 });
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+// sparks drifting up out of the rift (square pixels, like the game)
+const cv = document.getElementById('sparks'), cx = cv.getContext('2d');
+let W, H, sparks = [];
+function size() { W = cv.width = cv.offsetWidth; H = cv.height = cv.offsetHeight; }
+addEventListener('resize', size); size();
+for (let i = 0; i < 70; i++) sparks.push({ x: Math.random(), y: Math.random(), v: .2 + Math.random() * .6, s: 2 + (Math.random() * 3 | 0), c: Math.random() < .5 ? '#ff7cf0' : (Math.random() < .5 ? '#c7a6ff' : '#fff1b0') });
+(function tick() {
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    cx.clearRect(0, 0, W, H);
+    for (const p of sparks) {
+      p.y -= p.v / H * 2.2; if (p.y < -0.02) { p.y = 1.02; p.x = Math.random(); }
+      const x = (p.x + Math.sin((p.y + p.x) * 9) * .01) * W, y = p.y * H;
+      cx.globalAlpha = Math.min(1, p.y * 1.6); cx.fillStyle = p.c; cx.fillRect(x | 0, y | 0, p.s, p.s);
+    }
+  }
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
